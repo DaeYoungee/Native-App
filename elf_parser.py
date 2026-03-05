@@ -40,6 +40,18 @@ class ELFHeader:
     e_shnum: int         # Section header 개수
     e_shstrndx: int      # Section name string table index
 
+@dataclass
+class ProgramHeader:
+    '''Program Header 정보'''
+    p_type: int
+    p_flag: int
+    p_offset: int
+    p_vaddr: int
+    p_paddr: int
+    p_filesz: int
+    p_memsz: int
+    p_align: int
+
 
 class ELFParser:
     ELF_MAGIC = b'\x7fELF'
@@ -55,8 +67,11 @@ class ELFParser:
     def parse(self):
         # ELF 파일 파싱 로직 구현
         if self.parse_elf_header():
-            print("ELF Header parsed successfully!")
+            print("--- ELF Header parsed successfully! ---")
             print(self.elf_header)
+        if self.parse_program_header():
+            print("--- ProgramHeader parsed successfully! ---")
+            print(self.program_headers)
 
     def parse_elf_header(self) -> bool:
         # ELF 헤더 파싱 로직 구현
@@ -104,3 +119,21 @@ class ELFParser:
             return False  # ELF32는 지원하지 않음
         return True
             
+    def parse_program_header(self) -> bool:
+        # 64bit 기준
+        for idx in range(0, self.elf_header.e_phnum):
+            binary_ph = self.data[self.elf_header.e_phoff + idx*self.elf_header.e_phentsize: self.elf_header.e_phoff + (idx+1)*self.elf_header.e_phentsize]
+            unpacked = unpack('<IIQQQQQQ', binary_ph)
+            ph = ProgramHeader(
+                p_type=unpacked[0],
+                p_flag=unpacked[1],
+                p_offset=unpacked[2],
+                p_vaddr=unpacked[3],
+                p_paddr=unpacked[4],
+                p_filesz=unpacked[5],
+                p_memsz=unpacked[6],
+                p_align=unpacked[7]
+            )
+            self.program_headers.append(ph)
+        return True
+
